@@ -3,6 +3,7 @@
 #include <vector>
 #include "gradient.h"
 
+using namespace std::chrono;
 using namespace std;
 
 ostream& operator<<(ostream& os, TrainingExample& te)
@@ -37,7 +38,11 @@ int main()
         cout << "Example " << i << ": " << ts[i] << endl;
 
     Hypothesis hyp(ts);
+    auto start = high_resolution_clock::now();
     vector<double> theta = hyp.gradientDescent();
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start);
+    cout<<"Time in Parallel: "<< duration.count()<<endl;
 
     cout << endl;
     for (size_t i = 0; i < theta.size(); i++)
