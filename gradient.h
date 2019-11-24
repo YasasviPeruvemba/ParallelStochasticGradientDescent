@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <thread>
 #include <chrono>
+#include <omp.h>
 
 using std::vector;
 using std::cout;
@@ -17,6 +18,43 @@ using namespace std;
 using std::fstream;
 
 fstream file("loss.txt", ios::out);
+
+
+template<typename T>
+T efficientSum(vector<T>& v){
+
+    int size = v.size();
+
+    int miniSize = log2(size);
+    
+    int nsets = ceil(1.0*size/miniSize);
+    
+    vector<T> sum(pow(2, ceil((log2(nsets)))), 0);
+
+    #pragma omp parallel for                            // divide into log(n) parts and take sequential sum. Work = log(n), Time = log(n).
+    for(int i=0; i<nsets; ++i){
+        T sm = 0;
+        int lim = min(size, (i+1)*miniSize);
+        for(int j=miniSize*i; j<lim; ++j){
+            sm += v[j];
+        }
+        sum[i] = sm;
+    }
+
+    int steps = log2(sum.size());
+    int offset = 2;
+    nsets = sum.size();
+    for(int h=steps; h>=0; --h){
+        int limit = nsets/offset;
+        #pragma omp parallel for
+        for(int i=0; i < limit; ++i){
+            sum[i] = sum[i] + sum[i + nsets/offset];
+        }
+        offset = offset*2;
+    }
+    return sum[0];
+
+}
 
 
 class TrainingExample
@@ -45,25 +83,27 @@ class Hypothesis
         double H(vector<double>& ntheta, vector<double>& features)
         {
             //cout << "H(x) = ";
-            double sum = 0.0;
+            vector<double> sum(nFeatures, 0.0);
+            #pragma omp parallel for
             for (unsigned i = 0; i < nFeatures; i++)
             {
                 //cout << ntheta[i] << "*" << features[i] << " ";
-                sum += ntheta[i]*features[i];
+                sum[i] = ntheta[i]*features[i];
             }
             //cout << " = " << sum << endl;
-            return sum;
+            return efficientSum(sum);
         }
 
         double J()
         {
-            double sum = 0.0;
+            vector<double> sum(mExamples, 0.0);
+            #pragma omp parallel for
             for (unsigned i = 0; i < mExamples; i++)
             {
                 double diff = H(theta, ts[i].getFeatures()) - ts[i].getTarget();
-                sum += diff*diff;
+                sum[i] = diff*diff;
             }
-            return sum / 2.0;
+            return efficientSum(sum) / 2.0;
         }
 
     public:
@@ -112,6 +152,7 @@ class Hypothesis
                     //cout << "Using example" << i << endl;
 
                     //Parallelise
+                    #pragma omp parallel for
                     for(int j = i*batchSize; j < (i+1)*batchSize; j++){
                         // cout<<"j : "<<j<<endl;
                         TrainingExample ex = ts[j];
@@ -121,18 +162,19 @@ class Hypothesis
                         for(int k = 0; k < nFeatures; k++){
                             cumulGrad += ex.getFeature(k);
                         }
-                        // featureSum = efficientSum(ex.getFeatures());
-                        cumulGrad*=diff;
+                        featureSum = efficientSum(ex.getFeatures());
+                        // cumulGrad*=diff;
 
-                        // grad[j] = diff * (featureSum);
+                        grad[j] = diff * (featureSum);
                         // cout << ex.getTarget() << "(T) - " << HH <<"(H) = " << diff <<endl;
                     }
 
-                    // cumulGrad = efficientSum(grad);
+                    cumulGrad = efficientSum(grad);
                     cumulGrad/=batchSize;
                     // cumulLoss = J();
                     // cout<<"cumulLoss : "<<cumulLoss<<endl;
                     //Parallelise
+                    #pragma omp parallel for
                     for (unsigned j = 0; j < nFeatures; j++)
                         newTheta[j] += cumulGrad;
 

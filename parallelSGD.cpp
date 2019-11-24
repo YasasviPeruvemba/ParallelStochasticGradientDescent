@@ -37,7 +37,7 @@ int main()
         // cout << "Example " << i << ": " << ts[i] << endl;
 
     Hypothesis hyp(ts);
-    vector<double> theta = hyp.gradientDescent(10);
+    vector<double> theta = hyp.gradientDescent(5);
 
     cout << endl;
     for (size_t i = 0; i < theta.size(); i++)
@@ -50,13 +50,14 @@ int main()
         cin >> x[i];
     }
 
-    double pred = theta[0];
-
+    vector<double> pred(theta.size(), 0.0);
+    pred[0] = theta[0];
+    #pragma omp parallel for
     for(int i=0;i<theta.size()-1;i++){
-        pred += x[i]*theta[i+1];
+        pred[i+1] = x[i]*theta[i+1];
     }
     
-    cout<<"Prediction : "<<pred<<endl<<endl;
+    cout<<"Prediction : "<<efficientSum(pred)<<endl<<endl;
 
     return 0;
 }
