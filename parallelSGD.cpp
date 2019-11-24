@@ -3,7 +3,6 @@
 #include <vector>
 #include "gradient.h"
 
-using namespace std::chrono;
 using namespace std;
 
 ostream& operator<<(ostream& os, TrainingExample& te)
@@ -24,8 +23,8 @@ int main()
     cout << "M = " << M << ", N = " << N << endl;
     for (int i = 0; i < M; i++)
     {
-        vector<int> feat(N+1, 1);
-        int y = 0;
+        vector<double> feat(N+1, 1);
+        double y = 0;
         for (int j = 0; j < N; j++)
             cin >> feat[j+1];
         cin >> y;
@@ -34,26 +33,30 @@ int main()
         ts.push_back(te);
     }
 
-    for (unsigned i = 0; i < ts.size(); i++)
-        cout << "Example " << i << ": " << ts[i] << endl;
+    // for (unsigned i = 0; i < ts.size(); i++)
+        // cout << "Example " << i << ": " << ts[i] << endl;
 
     Hypothesis hyp(ts);
-    auto start = high_resolution_clock::now();
-    vector<double> theta = hyp.gradientDescent();
-    auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(stop - start);
-    cout<<"Time in Parallel: "<< duration.count()<<endl;
+    vector<double> theta = hyp.gradientDescent(10);
 
     cout << endl;
     for (size_t i = 0; i < theta.size(); i++)
         cout << "th" << i << " = " << theta[i] << " ";
     cout << endl;
 
-    cout << "Input x1 x2" << endl;
-    int x1, x2;
-    cin >> x1 >> x2;
-    cout << "H = " << (theta[0]+theta[1]*x1+theta[2]*x2) << endl;
+    vector <int> x(N);
+
+    for(int i=0;i<theta.size()-1;i++){
+        cin >> x[i];
+    }
+
+    double pred = theta[0];
+
+    for(int i=0;i<theta.size()-1;i++){
+        pred += x[i]*theta[i+1];
+    }
     
+    cout<<"Prediction : "<<pred<<endl<<endl;
 
     return 0;
 }
