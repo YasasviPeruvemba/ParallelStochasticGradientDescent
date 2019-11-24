@@ -5,11 +5,19 @@
 #include <bits/stdc++.h>
 #include <iostream>
 #include <cmath>
+#include <unistd.h>
+#include <thread>
+#include <chrono>
 
 using std::vector;
 using std::cout;
 using std::endl;
 using std::random_shuffle;
+using namespace std;
+using std::fstream;
+
+fstream file("loss.txt", ios::out);
+
 
 class TrainingExample
 {
@@ -82,9 +90,11 @@ class Hypothesis
             int debug = 0;
             int cnt=0;
             double cumulLoss = 200.0;
+            
             while(cumulLoss > 100 && !converge)
             {
-                cnt++;
+                file << std::fixed << std::setprecision(20) << J() << endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 vector<double> newTheta = theta;
                 double cumulGrad = 0.0;
 
