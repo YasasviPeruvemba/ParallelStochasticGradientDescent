@@ -20,6 +20,8 @@ def animate(i):
             arr.append(val)
             ind.append(cnt)
     ax1.clear()
+    ax1.set_ylabel('Loss')
+    ax1.set_xlabel('Iterations(Serial)')
     ax1.plot(ind, arr)
 
 ani = animation.FuncAnimation(fig, animate, interval = 200)

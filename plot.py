@@ -3,7 +3,6 @@ import matplotlib.animation as animation
 from matplotlib import style
 
 style.use('fivethirtyeight')
-
 fig = plt.figure()
 ax1 = fig.add_subplot(1, 1, 1)
 
@@ -20,6 +19,8 @@ def animate(i):
             arr.append(val)
             ind.append(cnt)
     ax1.clear()
+    ax1.set_ylabel('Loss')
+    ax1.set_xlabel('Iterations(Parallel)')
     ax1.plot(ind, arr)
 
 ani = animation.FuncAnimation(fig, animate, interval = 200)

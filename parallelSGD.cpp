@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include "gradient.h"
+#include "serialgrad.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -42,7 +42,7 @@ int main()
     vector<double> theta = hyp.gradientDescent(5);
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
-    cout<<"Time in parallel: "<<duration.count()<<endl;
+    cout<<"Time in serial : "<<duration.count()<<endl;
 
     cout << endl;
     for (size_t i = 0; i < theta.size(); i++)
@@ -55,14 +55,15 @@ int main()
         cin >> x[i];
     }
 
-    vector<double> pred(theta.size(), 0.0);
-    pred[0] = theta[0];
-    #pragma omp parallel for
+    double pred=theta[0];
+    // vector<double> pred(theta.size(), 0.0);
+    // pred[0] = theta[0];
+    // #pragma omp parallel for
     for(int i=0;i<theta.size()-1;i++){
-        pred[i+1] = x[i]*theta[i+1];
+        pred += x[i]*theta[i+1];
     }
     
-    cout<<"Prediction : "<<efficientSum(pred)<<endl<<endl;
+    cout<<"Prediction : "<<pred<<endl<<endl;
 
     return 0;
 }
