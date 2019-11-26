@@ -17,7 +17,7 @@ using std::random_shuffle;
 using namespace std;
 using std::fstream;
 
-fstream file("loss.txt", ios::out);
+fstream file("loss2.txt", ios::out);
 
 
 template<typename T>
@@ -115,13 +115,17 @@ class Hypothesis
             if (mExamples > 0)
                 nFeatures = examples[0].getFeatures().size();
             theta = vector<double>(nFeatures, 1.0);
+            #pragma omp parallel for
+            for(int i=0;i<nFeatures;++i){
+                theta[i] = (double)((rand()%100)/100);
+            }
             cout<<"Features : "<<nFeatures<<endl;
         }
 
         vector<double> gradientDescent(int bS)
         {
             const double alpha = 0.000001;
-            const double eps   = 0.0001;
+            const double eps   = 0.00001;
             const int batchSize = bS;
             const int numBatches = mExamples/batchSize;
             cout<<"Batches : "<<numBatches<<" BatchSize = "<<batchSize<<endl;
@@ -134,20 +138,20 @@ class Hypothesis
             while(cumulLoss > 100 && !converge)
             {
                 file << std::fixed << std::setprecision(20) << J() << endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
                 vector<double> newTheta = theta;
-                double cumulGrad = 0.0;
-
+                // double cumulGrad = 0.0;
+                vector<double> cumulGrad(numBatches, 0.0);
                 //Shuffle Data
                 random_shuffle(ts.begin(),ts.end());
                 cout << "Loss : J(theta) = " << J() << endl << endl;
 
+                #pragma omp parallel for
                 for (unsigned i = 0; i < numBatches; i++)
                 {
-                    vector <double> grad(mExamples,0.0);
-                    vector <double> loss(mExamples,0.0);
+                    vector <double> grad(batchSize,0.0);
+                    vector <double> loss(batchSize,0.0);
                     double featureSum = 0.0;
-                    cumulGrad = 0.0;
                     cumulLoss = 0.0;
                     //cout << "Using example" << i << endl;
 
@@ -158,31 +162,33 @@ class Hypothesis
                         TrainingExample ex = ts[j];
                         double HH = H(newTheta, ex.getFeatures());
                         double diff = (ex.getTarget() - HH)*alpha;
-                        loss[j] = HH;
-                        for(int k = 0; k < nFeatures; k++){
-                            cumulGrad += ex.getFeature(k);
-                        }
+                        loss[j-(i*batchSize)] = HH;
                         featureSum = efficientSum(ex.getFeatures());
                         // cumulGrad*=diff;
 
-                        grad[j] = diff * (featureSum);
+                        grad[j-(i*batchSize)] = diff * (featureSum);
                         // cout << ex.getTarget() << "(T) - " << HH <<"(H) = " << diff <<endl;
                     }
 
-                    cumulGrad = efficientSum(grad);
-                    cumulGrad/=batchSize;
+                    cumulGrad[i] = efficientSum(grad);
+                    cumulGrad[i]/=batchSize;
                     // cumulLoss = J();
                     // cout<<"cumulLoss : "<<cumulLoss<<endl;
                     //Parallelise
-                    #pragma omp parallel for
-                    for (unsigned j = 0; j < nFeatures; j++)
-                        newTheta[j] += cumulGrad;
+                    
 
                     // for (int k = 0; k < newTheta.size(); k++)
                     //     cout << "newTh" << k << " = " << newTheta[k] << " ";
                     // cout << endl;
 
                 }
+
+                double finalCumulGrad = efficientSum(cumulGrad);
+                finalCumulGrad/=numBatches;
+                
+                #pragma omp parallel for
+                    for (unsigned j = 0; j < nFeatures; j++)
+                        newTheta[j] += finalCumulGrad;
 
                 // cout<<"Loss : "<<fabs(cumulLoss)<<endl<<endl;
 
