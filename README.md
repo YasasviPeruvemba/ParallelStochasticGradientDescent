@@ -1,5 +1,5 @@
 # ParallelStochasticGradientDescent
-Project Report on Parallelising Stochastic Gradient Descent by
+Project Report on Parallelising Stochastic Gradient Descent
 ## Authors
 **Divyansh Choudhary**
 
